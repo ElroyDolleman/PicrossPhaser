@@ -1,0 +1,12 @@
+.vscode
+node_modules
+server
+
+*.seed
+*.log
+*.csv
+*.dat
+*.out
+*.pid
+*.gz
+*DS_store
