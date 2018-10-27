@@ -3,6 +3,8 @@ const SCREEN_HEIGHT: number = 600;
 
 class GameScene extends Phaser.Scene
 {
+    board: Board;
+
     constructor()
     {
         super({ key: 'GameScene', active: true});
@@ -10,12 +12,13 @@ class GameScene extends Phaser.Scene
 
     preload()
     {
-        
+        this.load.spritesheet('picross-main-sheet', 'assets/picross_sheet.png', { frameWidth: CELL_SIZE, frameHeight: CELL_SIZE });
     }
 
     create()
     {
-
+        this.board = new Board(8, 8);
+        this.board.createSprites(this);
     }
 
     update()
