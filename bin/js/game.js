@@ -6,8 +6,8 @@ class GameScene extends Phaser.Scene {
         this.load.spritesheet('picross-main-sheet', 'assets/picross_sheet.png', { frameWidth: CELL_SIZE, frameHeight: CELL_SIZE });
     }
     create() {
-        this.board = new Board(8, 8);
-        this.board.create(this);
+        this.board = new Board();
+        this.board.create(this, Pictures.Heart);
     }
     update() {
         this.updateInput();
@@ -28,7 +28,6 @@ class GameScene extends Phaser.Scene {
             }
             // When the player didn't click on an unrevealed tile
             else {
-                console.log(null == true);
             }
         }
     }
@@ -68,17 +67,21 @@ class Board {
     get boardLeft() { return SCREEN_WIDTH / 2 - this.boardPixelWitdh / 2; }
     get boardTop() { return SCREEN_HEIGHT / 2 - this.boardPixelHeight / 2; }
     get tilesAmount() { return this.gridSize.x * this.gridSize.y; }
-    constructor(rowLength, columnLength) {
-        this.gridSize = new Phaser.Geom.Point(rowLength, columnLength);
+    constructor() {
     }
-    create(scene) {
+    create(scene, picture) {
+        // Determine the gridsize based on the picture
+        this.gridSize = new Phaser.Geom.Point(picture.length, picture[0].length);
         this.tiles = Array();
+        this.tilesToBeRevealed = 0;
         for (let y = 0; y < this.gridSize.y; y++) {
             // Add a new row
             this.tiles.push(new Array());
             for (let x = 0; x < this.gridSize.x; x++) {
                 // Add a new Tile
-                this.tiles[y].push(new Tile(scene, this.toScreenPosition(x, y), false));
+                this.tiles[y].push(new Tile(scene, this.toScreenPosition(x, y), !!picture[y][x]));
+                // It adds 1 if the tile must be revealed and 0 if not
+                this.tilesToBeRevealed += picture[y][x];
             }
         }
     }
@@ -101,9 +104,15 @@ class Board {
     // }
     revealTile(gridpos) {
         let tile = this.getTile(gridpos.x, gridpos.y);
-        // Reveal the tile and return whether it was correct or not
+        // If the player clicked on a valid tile
         if (tile != null && tile.isInteractive) {
-            return tile.reveal();
+            // Reveal the tile and return whether it was correct or not
+            if (tile.reveal()) {
+                this.tilesToBeRevealed--;
+                console.log(this.tilesToBeRevealed);
+                return true;
+            }
+            return false;
         }
         // If nothing was revealed, then there was no mistake
         return null;
@@ -129,6 +138,17 @@ class Board {
         return new Phaser.Geom.Point(Math.floor(this.boardLeft + gridPosX * CELL_SIZE), Math.floor(this.boardTop + gridPosY * CELL_SIZE));
     }
 }
+var Pictures = {
+    Heart: [
+        [0, 1, 1, 0, 1, 1, 0],
+        [1, 1, 0, 1, 1, 1, 1],
+        [1, 0, 1, 1, 1, 1, 1],
+        [1, 0, 1, 1, 1, 1, 1],
+        [0, 1, 1, 1, 1, 1, 0],
+        [0, 0, 1, 1, 1, 0, 0],
+        [0, 0, 0, 1, 0, 0, 0],
+    ]
+};
 var TileStates;
 (function (TileStates) {
     TileStates[TileStates["Unrevealed"] = 0] = "Unrevealed";
