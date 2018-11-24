@@ -1,4 +1,5 @@
 /// <reference path="scenes/gamescene.ts"/>
+/// <reference path="scenes/editorscene.ts"/>
 /// <reference path="settings.ts"/>
 
 var config = {
@@ -10,7 +11,7 @@ var config = {
     title: "Picross",
     version: "1.0.0",
     disableContextMenu: true,
-    scene: [ GameScene ]
+    scene: [ EditorScene ]
 };
 
 var game = new Phaser.Game(config);

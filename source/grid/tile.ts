@@ -18,7 +18,7 @@ enum TileFrames
 
 class Tile
 {
-    isColored: boolean;
+    isFilled: boolean;
 
     private state: TileStates = TileStates.Unrevealed;
 
@@ -30,7 +30,7 @@ class Tile
 
     constructor(scene: Phaser.Scene, worldPosition: Phaser.Geom.Point, isColored: boolean)
     {
-        this.isColored = isColored;
+        this.isFilled = isColored;
 
         this.backSprite = scene.add.tileSprite(worldPosition.x, worldPosition.y, CELL_SIZE, CELL_SIZE, "picross-main-sheet", TileFrames.Empty);
         this.backSprite.setOrigin(0, 0);
@@ -57,7 +57,7 @@ class Tile
             return null;
         }
 
-        if (this.isColored) {
+        if (this.isFilled) {
             this.changeState(TileStates.Correct);
             return true;
         }
@@ -73,6 +73,7 @@ class Tile
             default:
             case TileStates.Unrevealed:
                 this.backSprite.setFrame(TileFrames.Empty);
+                break;
             case TileStates.MarkedAsBlank:
                 this.frontSprite.setFrame(TileFrames.Cross);
                 this.frontSprite.setVisible(true);

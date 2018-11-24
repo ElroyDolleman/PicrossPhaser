@@ -3,8 +3,6 @@ const CELL_SIZE: number = 32;
 
 class Board
 {
-    spriteGroup: Phaser.GameObjects.Group;
-
     gridSize: Phaser.Geom.Point;
 
     tiles: Array<Array<Tile>>;
@@ -23,6 +21,7 @@ class Board
         
     }
 
+    /** Creates a board based on the picture array. The array should consist out of 1's and 0's (1 == filled, 0 == blank) */
     create(scene: Phaser.Scene, picture: Array<Array<number>>)
     {
         // Determine the gridsize based on the picture
@@ -31,11 +30,11 @@ class Board
         this.tiles = Array<Array<Tile>>();
         this.tilesToBeRevealed = 0;
 
-        for (let y = 0; y < this.gridSize.y; y++) {
+        for (var y = 0; y < this.gridSize.y; y++) {
             // Add a new row
             this.tiles.push(new Array<Tile>());
             
-            for (let x = 0; x < this.gridSize.x; x++) {
+            for (var x = 0; x < this.gridSize.x; x++) {
                 // Add a new Tile
                 this.tiles[y].push(new Tile(scene, this.toScreenPosition(x, y), !!picture[y][x]));
 
@@ -45,25 +44,25 @@ class Board
         }
     }
 
-    // createTileSprites(scene: Phaser.Scene): Phaser.GameObjects.Group
-    // {
-    //     var groupConfig: GroupCreateConfig = {
-    //         key: "picross-main-sheet",
-    //         frame: TileFrames.Empty,
-    //         frameQuantity: this.tilesAmount,
-    //         gridAlign: {
-    //             x: CELL_SIZE / 2 + this.boardLeft,
-    //             y: CELL_SIZE / 2 + this.boardTop,
-    //             width: this.gridSize.x,
-    //             height: this.gridSize.y,
-    //             cellWidth: CELL_SIZE,
-    //             cellHeight: CELL_SIZE
-    //         }
-    //     };
+    /** Creates an empty board with a specified size */
+    createEmpty(scene: Phaser.Scene, rowsAmount: number, columnsAmount: number)
+    {
+        // Create an empty 2d array of 0's
+        var empty = Array<Array<number>>();
+        for (var y = 0; y < columnsAmount; y++) {
+            empty.push(new Array<number>());
+            for (var x = 0; x < rowsAmount; x++) {
+                empty[y].push(0);
+            }
+        }
 
-    //     return scene.add.group(groupConfig);
-    // }
+        this.create(scene, empty);
+    }
 
+    /** 
+     * Reveal the tile as blank or filled.
+     * @returns Whether the tile was filled or not. It indicates whether the player made a mistake by revealing this tile or not.
+    */
     revealTile(gridpos: Phaser.Geom.Point): boolean
     {
         let tile = this.getTile(gridpos.x, gridpos.y);
@@ -82,6 +81,7 @@ class Board
         return null;
     }
 
+    /** This will mark the tile as blank. */
     markTile(gridpos: Phaser.Geom.Point)
     {
         let tile = this.getTile(gridpos.x, gridpos.y);
@@ -91,6 +91,10 @@ class Board
         }
     }
 
+    /** 
+     * Get a tile at a specific grid location. 
+     * @returns The tile at the specified grid location. Returns null if the location was outside the grid.
+    */
     getTile(x: number, y: number): Tile
     {
         if (x < 0 || x >= this.gridSize.x || y < 0 || y >= this.gridSize.y) {
@@ -99,7 +103,10 @@ class Board
         return this.tiles[y][x];
     }
 
-    // Converts a screen position to a location in the grid
+    /** 
+     * Converts a screen position to a location in the grid.
+     * @returns The grid location of the specified screen position.
+    */
     toGridPosition(screenPosX: number, screenPosY: number): Phaser.Geom.Point
     {
         return new Phaser.Geom.Point(
@@ -108,12 +115,36 @@ class Board
         );                    
     }
 
-    // Converts a grid location to a screen position
+    /** 
+     * Converts a grid location to a screen position.
+     * @returns The screen position of the specified grid location.
+    */
     toScreenPosition(gridPosX: number, gridPosY: number): Phaser.Geom.Point
     {
         return new Phaser.Geom.Point(
             Math.floor(this.boardLeft + gridPosX * CELL_SIZE),  
             Math.floor(this.boardTop + gridPosY * CELL_SIZE),
         );
+    }
+
+    /** 
+     * Creates an array based on the current picture.
+     * @returns An array that consists out of 1's and 0's forming the current picture.
+    */
+    createPictureArray(): Array<Array<number>>
+    {
+        var picture = new Array<Array<number>>();
+
+        for (var y = 0; y < this.gridSize.y; y++) {
+            // Add a new row
+            picture.push(new Array<number>());
+            
+            // Adds a 0 or 1 depending on whether the corresponding tile is filled or not
+            for (var x = 0; x < this.gridSize.x; x++) {
+                picture[y].push(+this.tiles[y][x].isFilled);
+            }
+        }
+
+        return picture;
     }
 }
