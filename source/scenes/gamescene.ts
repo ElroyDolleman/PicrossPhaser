@@ -14,8 +14,8 @@ class GameScene extends Phaser.Scene
 
     create()
     {
-        this.board = new Board(8, 8);
-        this.board.create(this);
+        this.board = new Board();
+        this.board.create(this, Pictures.Heart);
     }
 
     update()

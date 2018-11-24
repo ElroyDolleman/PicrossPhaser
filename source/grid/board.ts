@@ -8,6 +8,7 @@ class Board
     gridSize: Phaser.Geom.Point;
 
     tiles: Array<Array<Tile>>;
+    tilesToBeRevealed: number;
 
     get boardPixelWitdh(): number { return CELL_SIZE * this.gridSize.x; }
     get boardPixelHeight(): number { return CELL_SIZE * this.gridSize.y; }
@@ -17,14 +18,18 @@ class Board
 
     get tilesAmount(): number { return this.gridSize.x * this.gridSize.y; }
 
-    constructor(rowLength: number, columnLength: number)
+    constructor()
     {
-        this.gridSize = new Phaser.Geom.Point(rowLength, columnLength);
+        
     }
 
-    create(scene: Phaser.Scene)
+    create(scene: Phaser.Scene, picture: Array<Array<number>>)
     {
+        // Determine the gridsize based on the picture
+        this.gridSize = new Phaser.Geom.Point(picture.length, picture[0].length);
+
         this.tiles = Array<Array<Tile>>();
+        this.tilesToBeRevealed = 0;
 
         for (let y = 0; y < this.gridSize.y; y++) {
             // Add a new row
@@ -32,7 +37,10 @@ class Board
             
             for (let x = 0; x < this.gridSize.x; x++) {
                 // Add a new Tile
-                this.tiles[y].push(new Tile(scene, this.toScreenPosition(x, y), false));
+                this.tiles[y].push(new Tile(scene, this.toScreenPosition(x, y), !!picture[y][x]));
+
+                // It adds 1 if the tile must be revealed and 0 if not
+                this.tilesToBeRevealed += picture[y][x];
             }
         }
     }
@@ -59,10 +67,15 @@ class Board
     revealTile(gridpos: Phaser.Geom.Point): boolean
     {
         let tile = this.getTile(gridpos.x, gridpos.y);
-
-        // Reveal the tile and return whether it was correct or not
+        
+        // If the player clicked on a valid tile
         if (tile != null && tile.isInteractive) {
-            return tile.reveal();
+            // Reveal the tile and return whether it was correct or not
+            if (tile.reveal()) {
+                this.tilesToBeRevealed--;
+                return true;
+            }
+            return false;
         }
 
         // If nothing was revealed, then there was no mistake
