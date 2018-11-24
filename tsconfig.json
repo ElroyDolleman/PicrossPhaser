@@ -2,7 +2,8 @@
     "compilerOptions": {
         "target": "es6",
         "sourceMap": true,
-        "outFile": "bin/js/game.js"
-        
+        "outFile": "bin/js/game.js",
+        "module": "system",
+        "noImplicitAny": true
     }
 }
