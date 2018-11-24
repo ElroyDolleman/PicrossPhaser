@@ -1,5 +1,3 @@
-const SCREEN_WIDTH = 800;
-const SCREEN_HEIGHT = 600;
 class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene', active: true });
@@ -9,12 +7,33 @@ class GameScene extends Phaser.Scene {
     }
     create() {
         this.board = new Board(8, 8);
-        this.board.createSprites(this);
+        this.board.create(this);
     }
     update() {
+        this.updateInput();
+    }
+    updateInput() {
+        if (this.input.activePointer.justDown) {
+            // Get the grid location of the pointer
+            let pointerGridPos = this.board.toGridPosition(this.input.activePointer.x, this.input.activePointer.y);
+            // Reveal the tile and check if the player is correct
+            let correct = this.board.revealTile(pointerGridPos);
+            // When the tile is revealed and it was correct
+            if (correct === true) {
+                console.log("Correct");
+            }
+            // When the tile is revealed but it was a mistake
+            else if (correct === false) {
+                console.log("Wrong");
+            }
+            // When the player didn't click on an unrevealed tile
+            else {
+                console.log(null == true);
+            }
+        }
     }
     resize() {
-        var canvas = game.canvas, width = window.innerWidth, height = window.innerHeight;
+        var canvas = this.game.canvas, width = window.innerWidth, height = window.innerHeight;
         var wratio = width / height, ratio = canvas.width / canvas.height;
         if (wratio < ratio) {
             canvas.style.width = width + "px";
@@ -26,23 +45,23 @@ class GameScene extends Phaser.Scene {
         }
     }
 }
+const SCREEN_WIDTH = 800;
+const SCREEN_HEIGHT = 600;
+/// <reference path="scenes/gamescene.ts"/>
+/// <reference path="settings.ts"/>
 var config = {
     type: Phaser.AUTO,
     width: SCREEN_WIDTH,
     height: SCREEN_HEIGHT,
     backgroundColor: '#e9f4fc',
     parent: 'picross',
+    title: "Picross",
+    version: "1.0.0",
     disableContextMenu: true,
     scene: [GameScene]
 };
 var game = new Phaser.Game(config);
 const CELL_SIZE = 32;
-var TileFrames;
-(function (TileFrames) {
-    TileFrames[TileFrames["Empty"] = 16] = "Empty";
-    TileFrames[TileFrames["Marked"] = 17] = "Marked";
-    TileFrames[TileFrames["Cross"] = 19] = "Cross";
-})(TileFrames || (TileFrames = {}));
 class Board {
     get boardPixelWitdh() { return CELL_SIZE * this.gridSize.x; }
     get boardPixelHeight() { return CELL_SIZE * this.gridSize.y; }
@@ -52,38 +71,92 @@ class Board {
     constructor(rowLength, columnLength) {
         this.gridSize = new Phaser.Geom.Point(rowLength, columnLength);
     }
-    createSprites(scene) {
-        var groupConfig = {
-            key: "picross-main-sheet",
-            frame: TileFrames.Empty,
-            frameQuantity: this.tilesAmount,
-            gridAlign: {
-                x: CELL_SIZE / 2 + this.boardLeft,
-                y: CELL_SIZE / 2 + this.boardTop,
-                width: this.gridSize.x,
-                height: this.gridSize.y,
-                cellWidth: CELL_SIZE,
-                cellHeight: CELL_SIZE
+    create(scene) {
+        this.tiles = Array();
+        for (let y = 0; y < this.gridSize.y; y++) {
+            // Add a new row
+            this.tiles.push(new Array());
+            for (let x = 0; x < this.gridSize.x; x++) {
+                // Add a new Tile
+                this.tiles[y].push(new Tile(scene, this.toScreenPosition(x, y), false));
             }
-        };
-        scene.add.group(groupConfig);
+        }
+    }
+    // createTileSprites(scene: Phaser.Scene): Phaser.GameObjects.Group
+    // {
+    //     var groupConfig: GroupCreateConfig = {
+    //         key: "picross-main-sheet",
+    //         frame: TileFrames.Empty,
+    //         frameQuantity: this.tilesAmount,
+    //         gridAlign: {
+    //             x: CELL_SIZE / 2 + this.boardLeft,
+    //             y: CELL_SIZE / 2 + this.boardTop,
+    //             width: this.gridSize.x,
+    //             height: this.gridSize.y,
+    //             cellWidth: CELL_SIZE,
+    //             cellHeight: CELL_SIZE
+    //         }
+    //     };
+    //     return scene.add.group(groupConfig);
+    // }
+    revealTile(gridpos) {
+        let tile = this.getTile(gridpos.x, gridpos.y);
+        // Reveal the tile and return whether it was correct or not
+        if (tile != null && tile.isInteractive) {
+            return tile.reveal();
+        }
+        // If nothing was revealed, then there was no mistake
+        return null;
+    }
+    markTile(gridpos) {
+        let tile = this.getTile(gridpos.x, gridpos.y);
+        if (tile != null) {
+            tile.markAsBlank();
+        }
+    }
+    getTile(x, y) {
+        if (x < 0 || x >= this.gridSize.x || y < 0 || y >= this.gridSize.y) {
+            return null;
+        }
+        return this.tiles[y][x];
+    }
+    // Converts a screen position to a location in the grid
+    toGridPosition(screenPosX, screenPosY) {
+        return new Phaser.Geom.Point(Math.floor((screenPosX - this.boardLeft) / CELL_SIZE), Math.floor((screenPosY - this.boardTop) / CELL_SIZE));
+    }
+    // Converts a grid location to a screen position
+    toScreenPosition(gridPosX, gridPosY) {
+        return new Phaser.Geom.Point(Math.floor(this.boardLeft + gridPosX * CELL_SIZE), Math.floor(this.boardTop + gridPosY * CELL_SIZE));
     }
 }
 var TileStates;
 (function (TileStates) {
     TileStates[TileStates["Unrevealed"] = 0] = "Unrevealed";
     TileStates[TileStates["MarkedAsBlank"] = 1] = "MarkedAsBlank";
-    TileStates[TileStates["Revealed"] = 2] = "Revealed";
+    TileStates[TileStates["Correct"] = 2] = "Correct";
     TileStates[TileStates["Mistake"] = 3] = "Mistake";
 })(TileStates || (TileStates = {}));
+var TileFrames;
+(function (TileFrames) {
+    TileFrames[TileFrames["Empty"] = 16] = "Empty";
+    TileFrames[TileFrames["Correct"] = 17] = "Correct";
+    TileFrames[TileFrames["Mistake"] = 18] = "Mistake";
+    TileFrames[TileFrames["Cross"] = 19] = "Cross";
+    TileFrames[TileFrames["MistakeCross"] = 20] = "MistakeCross";
+    TileFrames[TileFrames["HintCross"] = 21] = "HintCross";
+})(TileFrames || (TileFrames = {}));
 class Tile {
-    constructor(backSprite, isColored) {
+    constructor(scene, worldPosition, isColored) {
         this.state = TileStates.Unrevealed;
         this.isColored = isColored;
-        this.backSprite = backSprite;
+        this.backSprite = scene.add.tileSprite(worldPosition.x, worldPosition.y, CELL_SIZE, CELL_SIZE, "picross-main-sheet", TileFrames.Empty);
+        this.backSprite.setOrigin(0, 0);
+        this.frontSprite = scene.add.tileSprite(worldPosition.x, worldPosition.y, CELL_SIZE, CELL_SIZE, "picross-main-sheet", TileFrames.Cross);
+        this.frontSprite.setOrigin(0, 0);
+        this.frontSprite.setVisible(false);
     }
-    isMarkedAsBlank() { return this.state == TileStates.MarkedAsBlank; }
-    isInteractive() { return this.state == TileStates.Unrevealed || this.state == TileStates.MarkedAsBlank; }
+    get isMarkedAsBlank() { return this.state == TileStates.MarkedAsBlank; }
+    get isInteractive() { return this.state == TileStates.Unrevealed || this.state == TileStates.MarkedAsBlank; }
     markAsBlank() {
         if (!this.isMarkedAsBlank) {
             this.changeState(TileStates.MarkedAsBlank);
@@ -93,17 +166,36 @@ class Tile {
         }
     }
     reveal() {
+        // Can't reveal a tile if it is marked as an mistake
         if (this.isMarkedAsBlank) {
-            return;
+            return null;
         }
         if (this.isColored) {
-            this.changeState(TileStates.Revealed);
+            this.changeState(TileStates.Correct);
+            return true;
         }
-        else {
-            this.changeState(TileStates.Mistake);
-        }
+        this.changeState(TileStates.Mistake);
+        return false;
     }
     changeState(newState) {
+        let frame = 0;
+        switch (newState) {
+            default:
+            case TileStates.Unrevealed:
+                this.backSprite.setFrame(TileFrames.Empty);
+            case TileStates.MarkedAsBlank:
+                this.frontSprite.setFrame(TileFrames.Cross);
+                this.frontSprite.setVisible(true);
+                break;
+            case TileStates.Correct:
+                this.backSprite.setFrame(TileFrames.Correct);
+                break;
+            case TileStates.Mistake:
+                this.backSprite.setFrame(TileFrames.Mistake);
+                this.frontSprite.setFrame(TileFrames.MistakeCross);
+                this.frontSprite.setVisible(true);
+                break;
+        }
         this.state = newState;
     }
 }
