@@ -18,7 +18,7 @@ class EditorScene extends Phaser.Scene
         this.saveKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
 
         this.board = new Board();
-        this.board.createEmpty(this, 8, 8);
+        this.board.createEmpty(this, 10, 10);
     }
 
     update()

@@ -2,6 +2,11 @@ class GameScene extends Phaser.Scene
 {
     board: Board;
 
+    gameStats = {
+        mistakes: 0,
+        successfulReveals: 0
+    }
+
     constructor()
     {
         super({ key: 'GameScene', active: true});
@@ -15,7 +20,7 @@ class GameScene extends Phaser.Scene
     create()
     {
         this.board = new Board();
-        this.board.create(this, Pictures.Heart);
+        this.board.create(this, Pictures.SmashLogo);
     }
 
     update()
@@ -42,7 +47,9 @@ class GameScene extends Phaser.Scene
 
             // When the tile is revealed and it was correct
             if (correct === true) {
-                console.log("Correct");
+                // Update the game stats
+                this.gameStats.successfulReveals++;
+                console.log("Correct", this.gameStats.successfulReveals);
 
                 if (this.board.tilesToBeRevealed == 0) {
                     console.log("Win!");
@@ -50,7 +57,9 @@ class GameScene extends Phaser.Scene
             }
             // When the tile is revealed but it was a mistake
             else if (correct === false) {
-                console.log("Wrong");
+                // Update the amount of mistakes
+                this.gameStats.mistakes++;
+                console.log("Wrong", this.gameStats.mistakes);
             }
             // When the player didn't click on an unrevealed tile
             else {

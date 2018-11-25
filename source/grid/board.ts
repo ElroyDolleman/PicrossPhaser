@@ -8,6 +8,9 @@ class Board
     tiles: Array<Array<Tile>>;
     tilesToBeRevealed: number;
 
+    rowHintNumbers: Array<Array<HintNumber>>;
+    columnHintNumbers: Array<Array<HintNumber>>;
+
     get boardPixelWitdh(): number { return CELL_SIZE * this.gridSize.x; }
     get boardPixelHeight(): number { return CELL_SIZE * this.gridSize.y; }
 
@@ -42,13 +45,16 @@ class Board
                 this.tilesToBeRevealed += picture[y][x];
             }
         }
+
+        this.createRowHintNumbers(scene, picture);
+        this.createColumnHintNumbers(scene, picture);
     }
 
     /** Creates an empty board with a specified size */
     createEmpty(scene: Phaser.Scene, rowsAmount: number, columnsAmount: number)
     {
         // Create an empty 2d array of 0's
-        var empty = Array<Array<number>>();
+        var empty = new Array<Array<number>>();
         for (var y = 0; y < columnsAmount; y++) {
             empty.push(new Array<number>());
             for (var x = 0; x < rowsAmount; x++) {
@@ -57,6 +63,68 @@ class Board
         }
 
         this.create(scene, empty);
+    }
+
+    createRowHintNumbers(scene: Phaser.Scene, picture: Array<Array<number>>)
+    {
+        this.rowHintNumbers = new Array<Array<HintNumber>>();
+
+        for (var y = 0; y < this.gridSize.y; y++) {
+            // Create a new row in the array
+            this.rowHintNumbers.push(new Array<HintNumber>());
+            
+            let sequence = 0;
+            for (var x = this.gridSize.x - 1; x >= 0; x--) {
+                // Count how many filled tiles there are in a sequence
+                if (!!picture[y][x]) {
+                    sequence++;
+                }
+
+                // When there is a blank tile or if it's the last tile
+                let seqeunceEnded = (!!!picture[y][x] || x == 0) && (sequence > 0);
+                // When the row doesn't have any filled tiles
+                let rowHasNoFilledTiles = sequence == 0 && x == 0 && this.rowHintNumbers[y].length == 0;
+
+                if (seqeunceEnded || rowHasNoFilledTiles) {
+                    // Store the seqeunce as a hint number
+                    this.rowHintNumbers[y].push(new HintNumber(scene, this.toScreenPosition(-(this.rowHintNumbers[y].length + 1), y), sequence));
+
+                    // Reset the seqeunce
+                    sequence = 0;
+                }
+            }
+        }
+    }
+
+    createColumnHintNumbers(scene: Phaser.Scene, picture: Array<Array<number>>)
+    {
+        this.columnHintNumbers = new Array<Array<HintNumber>>();
+
+        for (var x = 0; x < this.gridSize.x; x++) {
+            // Create a new row in the array
+            this.columnHintNumbers.push(new Array<HintNumber>());
+            
+            let sequence = 0;
+            for (var y = this.gridSize.y - 1; y >= 0; y--) {
+                // Count how many filled tiles there are in a sequence
+                if (!!picture[y][x]) {
+                    sequence++;
+                }
+
+                // When there is a blank tile or if it's the last tile
+                let seqeunceEnded = (!!!picture[y][x] || y == 0) && (sequence > 0);
+                // When the row doesn't have any filled tiles
+                let rowHasNoFilledTiles = sequence == 0 && y == 0 && this.columnHintNumbers[x].length == 0;
+                
+                if (seqeunceEnded || rowHasNoFilledTiles) {
+                    // Store the seqeunce as a hint number
+                    this.columnHintNumbers[x].push(new HintNumber(scene, this.toScreenPosition(x, -(this.columnHintNumbers[x].length + 1)), sequence));
+
+                    // Reset the seqeunce
+                    sequence = 0;
+                }
+            }
+        }
     }
 
     /** 
@@ -69,12 +137,16 @@ class Board
         
         // If the player clicked on a valid tile
         if (tile != null && tile.isInteractive) {
-            // Reveal the tile and return whether it was correct or not
-            if (tile.reveal()) {
+            // Reveal the tile
+            let revealed = tile.reveal();
+
+            // When succesfuly reveal, update the amount of tiles that needs to be revealed to win
+            if (revealed === true) {
                 this.tilesToBeRevealed--;
-                return true;
             }
-            return false;
+
+            // Return whether the tile was succesfuly revealed or not
+            return revealed;
         }
 
         // If nothing was revealed, then there was no mistake
