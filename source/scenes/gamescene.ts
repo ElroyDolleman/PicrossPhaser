@@ -30,12 +30,23 @@ class GameScene extends Phaser.Scene
             // Get the grid location of the pointer
             let pointerGridPos = this.board.toGridPosition(this.input.activePointer.x, this.input.activePointer.y);
 
+            if (this.input.activePointer.rightButtonDown())
+            {
+                this.board.markTile(pointerGridPos);
+
+                return;
+            }
+
             // Reveal the tile and check if the player is correct
             let correct = this.board.revealTile(pointerGridPos);
 
             // When the tile is revealed and it was correct
             if (correct === true) {
                 console.log("Correct");
+
+                if (this.board.tilesToBeRevealed == 0) {
+                    console.log("Win!");
+                }
             }
             // When the tile is revealed but it was a mistake
             else if (correct === false) {

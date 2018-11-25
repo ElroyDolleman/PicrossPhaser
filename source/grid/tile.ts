@@ -42,6 +42,10 @@ class Tile
 
     markAsBlank()
     {
+        if (!this.isInteractive) {
+            return;
+        }
+
         if (!this.isMarkedAsBlank) {
             this.changeState(TileStates.MarkedAsBlank);
         }
@@ -73,6 +77,7 @@ class Tile
             default:
             case TileStates.Unrevealed:
                 this.backSprite.setFrame(TileFrames.Empty);
+                this.frontSprite.setVisible(false);
                 break;
             case TileStates.MarkedAsBlank:
                 this.frontSprite.setFrame(TileFrames.Cross);

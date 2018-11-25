@@ -11,7 +11,7 @@ var config = {
     title: "Picross",
     version: "1.0.0",
     disableContextMenu: true,
-    scene: [ EditorScene ]
+    scene: [ GameScene ]
 };
 
 var game = new Phaser.Game(config);

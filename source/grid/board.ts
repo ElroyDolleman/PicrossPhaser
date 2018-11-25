@@ -25,7 +25,7 @@ class Board
     create(scene: Phaser.Scene, picture: Array<Array<number>>)
     {
         // Determine the gridsize based on the picture
-        this.gridSize = new Phaser.Geom.Point(picture.length, picture[0].length);
+        this.gridSize = new Phaser.Geom.Point(picture[0].length, picture.length);
 
         this.tiles = Array<Array<Tile>>();
         this.tilesToBeRevealed = 0;
