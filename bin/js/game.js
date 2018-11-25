@@ -1,13 +1,17 @@
 class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene', active: true });
+        this.gameStats = {
+            mistakes: 0,
+            successfulReveals: 0
+        };
     }
     preload() {
         this.load.spritesheet('picross-main-sheet', 'assets/picross_sheet.png', { frameWidth: CELL_SIZE, frameHeight: CELL_SIZE });
     }
     create() {
         this.board = new Board();
-        this.board.create(this, Pictures.Heart);
+        this.board.create(this, Pictures.SmashLogo);
     }
     update() {
         this.updateInput();
@@ -24,11 +28,18 @@ class GameScene extends Phaser.Scene {
             let correct = this.board.revealTile(pointerGridPos);
             // When the tile is revealed and it was correct
             if (correct === true) {
-                console.log("Correct");
+                // Update the game stats
+                this.gameStats.successfulReveals++;
+                console.log("Correct", this.gameStats.successfulReveals);
+                if (this.board.tilesToBeRevealed == 0) {
+                    console.log("Win!");
+                }
             }
             // When the tile is revealed but it was a mistake
             else if (correct === false) {
-                console.log("Wrong");
+                // Update the amount of mistakes
+                this.gameStats.mistakes++;
+                console.log("Wrong", this.gameStats.mistakes);
             }
             // When the player didn't click on an unrevealed tile
             else {
@@ -58,7 +69,7 @@ class EditorScene extends Phaser.Scene {
     create() {
         this.saveKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
         this.board = new Board();
-        this.board.createEmpty(this, 8, 8);
+        this.board.createEmpty(this, 10, 10);
     }
     update() {
         this.updateInput();
@@ -122,17 +133,18 @@ class Board {
             this.tiles.push(new Array());
             for (var x = 0; x < this.gridSize.x; x++) {
                 // Add a new Tile
-                console.log("pos", x, y);
                 this.tiles[y].push(new Tile(scene, this.toScreenPosition(x, y), !!picture[y][x]));
                 // It adds 1 if the tile must be revealed and 0 if not
                 this.tilesToBeRevealed += picture[y][x];
             }
         }
+        this.createRowHintNumbers(scene, picture);
+        this.createColumnHintNumbers(scene, picture);
     }
     /** Creates an empty board with a specified size */
     createEmpty(scene, rowsAmount, columnsAmount) {
         // Create an empty 2d array of 0's
-        var empty = Array();
+        var empty = new Array();
         for (var y = 0; y < columnsAmount; y++) {
             empty.push(new Array());
             for (var x = 0; x < rowsAmount; x++) {
@@ -140,6 +152,54 @@ class Board {
             }
         }
         this.create(scene, empty);
+    }
+    createRowHintNumbers(scene, picture) {
+        this.rowHintNumbers = new Array();
+        for (var y = 0; y < this.gridSize.y; y++) {
+            // Create a new row in the array
+            this.rowHintNumbers.push(new Array());
+            let sequence = 0;
+            for (var x = this.gridSize.x - 1; x >= 0; x--) {
+                // Count how many filled tiles there are in a sequence
+                if (!!picture[y][x]) {
+                    sequence++;
+                }
+                // When there is a blank tile or if it's the last tile
+                let seqeunceEnded = (!!!picture[y][x] || x == 0) && (sequence > 0);
+                // When the row doesn't have any filled tiles
+                let rowHasNoFilledTiles = sequence == 0 && x == 0 && this.rowHintNumbers[y].length == 0;
+                if (seqeunceEnded || rowHasNoFilledTiles) {
+                    // Store the seqeunce as a hint number
+                    this.rowHintNumbers[y].push(new HintNumber(scene, this.toScreenPosition(-(this.rowHintNumbers[y].length + 1), y), sequence));
+                    // Reset the seqeunce
+                    sequence = 0;
+                }
+            }
+        }
+    }
+    createColumnHintNumbers(scene, picture) {
+        this.columnHintNumbers = new Array();
+        for (var x = 0; x < this.gridSize.x; x++) {
+            // Create a new row in the array
+            this.columnHintNumbers.push(new Array());
+            let sequence = 0;
+            for (var y = this.gridSize.y - 1; y >= 0; y--) {
+                // Count how many filled tiles there are in a sequence
+                if (!!picture[y][x]) {
+                    sequence++;
+                }
+                // When there is a blank tile or if it's the last tile
+                let seqeunceEnded = (!!!picture[y][x] || y == 0) && (sequence > 0);
+                // When the row doesn't have any filled tiles
+                let rowHasNoFilledTiles = sequence == 0 && y == 0 && this.columnHintNumbers[x].length == 0;
+                if (seqeunceEnded || rowHasNoFilledTiles) {
+                    // Store the seqeunce as a hint number
+                    this.columnHintNumbers[x].push(new HintNumber(scene, this.toScreenPosition(x, -(this.columnHintNumbers[x].length + 1)), sequence));
+                    // Reset the seqeunce
+                    sequence = 0;
+                }
+            }
+        }
     }
     /**
      * Reveal the tile as blank or filled.
@@ -149,12 +209,14 @@ class Board {
         let tile = this.getTile(gridpos.x, gridpos.y);
         // If the player clicked on a valid tile
         if (tile != null && tile.isInteractive) {
-            // Reveal the tile and return whether it was correct or not
-            if (tile.reveal()) {
+            // Reveal the tile
+            let revealed = tile.reveal();
+            // When succesfuly reveal, update the amount of tiles that needs to be revealed to win
+            if (revealed === true) {
                 this.tilesToBeRevealed--;
-                return true;
             }
-            return false;
+            // Return whether the tile was succesfuly revealed or not
+            return revealed;
         }
         // If nothing was revealed, then there was no mistake
         return null;
@@ -207,6 +269,20 @@ class Board {
         return picture;
     }
 }
+class HintNumber {
+    constructor(scene, worldPosition, hintValue) {
+        this.found = false;
+        this.hintValue = hintValue;
+        // When the hint value is 0, it's found by default
+        if (hintValue == 0) {
+            this.found = true;
+        }
+        this.sprite = scene.add.tileSprite(worldPosition.x, worldPosition.y, CELL_SIZE, CELL_SIZE, "picross-main-sheet", hintValue);
+        this.sprite.tint = this.tintColor;
+        this.sprite.setOrigin(0, 0);
+    }
+    get tintColor() { return !this.found ? 0x0094FF : 0xC0C0C0; }
+}
 var Pictures = {
     Face: [
         [0, 0, 1, 1, 1, 1, 0, 0],
@@ -216,7 +292,7 @@ var Pictures = {
         [1, 0, 0, 0, 0, 0, 0, 1],
         [1, 0, 0, 1, 1, 0, 0, 1],
         [0, 1, 0, 0, 0, 0, 1, 0],
-        [0, 0, 1, 1, 1, 1, 0, 0]
+        [0, 0, 1, 1, 1, 1, 0, 0],
     ],
     Heart: [
         [0, 1, 1, 0, 0, 1, 1, 0],
@@ -225,7 +301,7 @@ var Pictures = {
         [1, 1, 1, 1, 1, 1, 1, 1],
         [0, 1, 1, 1, 1, 1, 1, 0],
         [0, 0, 1, 1, 1, 1, 0, 0],
-        [0, 0, 0, 1, 1, 0, 0, 0]
+        [0, 0, 0, 1, 1, 0, 0, 0],
     ],
     Pizza: [
         [0, 0, 0, 1, 1, 0, 0, 0],
@@ -235,7 +311,59 @@ var Pictures = {
         [0, 1, 0, 0, 1, 0, 1, 0],
         [1, 0, 1, 0, 0, 0, 0, 1],
         [1, 0, 0, 0, 0, 0, 1, 1],
-        [0, 1, 1, 1, 1, 1, 1, 0]
+        [0, 1, 1, 1, 1, 1, 1, 0],
+    ],
+    MusicNote: [
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 1, 0, 0],
+        [0, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 1, 0, 0, 0, 1, 0],
+        [0, 1, 1, 0, 1, 0, 0, 0, 0, 0],
+        [1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        [1, 1, 1, 1, 0, 0, 0, 0, 0, 0],
+        [0, 1, 1, 0, 0, 0, 0, 0, 0, 0],
+    ],
+    Scissor: [
+        [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+        [1, 1, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+        [0, 1, 1, 0, 0, 0, 0, 0, 1, 1, 0],
+        [0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0],
+        [0, 0, 0, 1, 1, 0, 1, 1, 0, 0, 0],
+        [0, 0, 0, 0, 1, 1, 1, 0, 0, 0, 0],
+        [0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0],
+        [1, 1, 1, 1, 1, 0, 1, 1, 1, 1, 1],
+        [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1],
+        [1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1],
+        [1, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1],
+    ],
+    Building: [
+        [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+        [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+        [0, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        [1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        [1, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1],
+        [1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1],
+        [1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 1],
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    ],
+    SmashLogo: [
+        [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0, 1, 1, 1, 0, 0],
+        [0, 1, 1, 0, 0, 1, 1, 1, 1, 0],
+        [0, 1, 1, 0, 0, 1, 1, 1, 1, 0],
+        [1, 1, 1, 0, 0, 1, 1, 1, 1, 1],
+        [1, 1, 1, 0, 0, 1, 1, 1, 1, 1],
+        [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        [0, 1, 1, 0, 0, 1, 1, 1, 1, 0],
+        [0, 0, 1, 0, 0, 1, 1, 1, 0, 0],
+        [0, 0, 0, 0, 0, 1, 0, 0, 0, 0],
     ],
 };
 var TileStates;
